@@ -57,7 +57,7 @@ namespace LibSimpleDatabase
             }
             else return settings.Value;
         }
-        public T GetValue<T>(string key, bool setDefault = false)
+        public T GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
             SimpleSetting settings = SelectSetting(key);
             if (settings == null)
@@ -67,12 +67,23 @@ namespace LibSimpleDatabase
 
                 return default(T);
             }
-            else return (T)Newtonsoft.Json.JsonConvert.DeserializeObject(settings.Value, typeof(T));
+            else
+            {
+                var ser = new JsonSerializerSettings
+                {
+                    TypeNameHandling = handling
+                };
+
+                if (noErrors)
+                    ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+
+                return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+            }
 
 
             //return settings == null ? default : (T)Newtonsoft.Json.JsonConvert.DeserializeObject(settings.Value, typeof(T));
         }
-        public T GetValue<T>(string key, T defaultValue, bool setDefault = false)
+        public T GetValue<T>(string key, T defaultValue, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
             SimpleSetting settings = SelectSetting(key);
             if (settings == null)
@@ -82,18 +93,38 @@ namespace LibSimpleDatabase
 
                 return defaultValue;
             }
-            else return (T)Newtonsoft.Json.JsonConvert.DeserializeObject(settings.Value, typeof(T));
+            else
+            {
+                var ser = new JsonSerializerSettings
+                {
+                    TypeNameHandling = handling
+                };
+
+                if (noErrors)
+                    ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+
+                  return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+            }
+              
         }
 
-        public List<T> GetAllValues<T>()
+        public List<T> GetAllValues<T>(TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
             List<SimpleSetting> settings = SelectAllSettings();
 
             List<T> lst = new List<T>();
 
+            var ser = new JsonSerializerSettings
+            {
+                TypeNameHandling = handling
+            };
+
+            if (noErrors)
+                ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+
             foreach (SimpleSetting ss in settings)
             {
-                lst.Add(ss.Value == string.Empty ? default : (T)Newtonsoft.Json.JsonConvert.DeserializeObject(ss.Value, typeof(T)));
+                lst.Add(ss.Value == string.Empty ? default : (T)JsonConvert.DeserializeObject(ss.Value, typeof(T), ser));
             }
             return lst;
         }
@@ -109,16 +140,20 @@ namespace LibSimpleDatabase
 
             OnPropertyChanged(key);
         }
-        public void SetValue<T>(string key, T value)
+        public void SetValue<T>(string key, T value, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
+            var ser = new JsonSerializerSettings
+            {
+                TypeNameHandling = handling
+            };
+
+            if (noErrors)
+                ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+
             SimpleSetting set = new SimpleSetting()
             {
                 Key = key,
-                Value = Newtonsoft.Json.JsonConvert.SerializeObject(value, new JsonSerializerSettings
-                {
-                    Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true,
-                    TypeNameHandling = TypeNameHandling.All
-                })
+                Value = JsonConvert.SerializeObject(value, ser)
             };
 
             _ = InsertOrReplace(set);
