@@ -19,7 +19,7 @@ namespace LibSimpleDatabase
             public string Value { get; set; } = string.Empty;
         }
 
-        private SQLiteConnection Connection { get; set; } = null;
+        private SQLiteConnection? Connection { get; set; } = null;
 
         public SimpleDatabase Open(string dbFilePath)
         {
