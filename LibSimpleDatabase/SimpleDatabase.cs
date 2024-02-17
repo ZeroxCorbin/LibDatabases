@@ -44,19 +44,6 @@ namespace LibSimpleDatabase
             }
         }
 
-        public string GetValue(string key, string defaultValue = "", bool setDefault = false)
-        {
-            SimpleSetting settings = SelectSetting(key);
-
-            if (settings == null)
-            {
-                if (setDefault)
-                    SetValue(key, defaultValue);
-
-                return defaultValue;
-            }
-            else return settings.Value;
-        }
         public T GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
             SimpleSetting settings = SelectSetting(key);
@@ -69,19 +56,23 @@ namespace LibSimpleDatabase
             }
             else
             {
-                var ser = new JsonSerializerSettings
+                if (typeof(T) == typeof(string) || typeof(T).IsPrimitive)
                 {
-                    TypeNameHandling = handling
-                };
+                    return (T)Convert.ChangeType(settings.Value, typeof(T));
+                }
+                else
+                {
+                    var ser = new JsonSerializerSettings
+                    {
+                        TypeNameHandling = handling
+                    };
 
-                if (noErrors)
-                    ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+                    if (noErrors)
+                        ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
 
-                return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+                    return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+                }
             }
-
-
-            //return settings == null ? default : (T)Newtonsoft.Json.JsonConvert.DeserializeObject(settings.Value, typeof(T));
         }
         public T GetValue<T>(string key, T defaultValue, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
@@ -95,17 +86,23 @@ namespace LibSimpleDatabase
             }
             else
             {
-                var ser = new JsonSerializerSettings
+                if(typeof(T) == typeof(string) || typeof(T).IsPrimitive)
                 {
-                    TypeNameHandling = handling
-                };
+                    return (T)Convert.ChangeType(settings.Value, typeof(T));
+                }
+                else
+                {
+                    var ser = new JsonSerializerSettings
+                    {
+                        TypeNameHandling = handling
+                    };
 
-                if (noErrors)
-                    ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+                    if (noErrors)
+                        ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
 
-                  return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+                    return (T)JsonConvert.DeserializeObject(settings.Value, typeof(T), ser);
+                }
             }
-              
         }
 
         public List<T> GetAllValues<T>(TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
@@ -142,21 +139,32 @@ namespace LibSimpleDatabase
         }
         public void SetValue<T>(string key, T value, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
         {
-            var ser = new JsonSerializerSettings
+            if(typeof(T) == typeof(string) || typeof(T).IsPrimitive)
             {
-                TypeNameHandling = handling
-            };
-
-            if (noErrors)
-                ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
-
-            SimpleSetting set = new SimpleSetting()
+                SimpleSetting set = new SimpleSetting()
+                {
+                    Key = key,
+                    Value = value.ToString()
+                };
+                _ = InsertOrReplace(set);
+            }
+            else
             {
-                Key = key,
-                Value = JsonConvert.SerializeObject(value, ser)
-            };
+                var ser = new JsonSerializerSettings
+                {
+                    TypeNameHandling = handling
+                };
 
-            _ = InsertOrReplace(set);
+                if (noErrors)
+                    ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
+
+                SimpleSetting set = new SimpleSetting()
+                {
+                    Key = key,
+                    Value = JsonConvert.SerializeObject(value, ser)
+                };
+                _ = InsertOrReplace(set);
+            }
 
             OnPropertyChanged(key);
         }
