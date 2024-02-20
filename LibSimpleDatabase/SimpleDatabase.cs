@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SQLite;
 using System;
 using System.Collections.Generic;
@@ -144,7 +145,7 @@ namespace LibSimpleDatabase
                 SimpleSetting set = new SimpleSetting()
                 {
                     Key = key,
-                    Value = value.ToString()
+                    Value = value?.ToString()
                 };
                 _ = InsertOrReplace(set);
             }
