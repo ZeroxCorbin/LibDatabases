@@ -16,13 +16,13 @@ namespace LibSimpleDatabase
         public class SimpleSetting
         {
             [PrimaryKey]
-            public string Key { get; set; } = string.Empty;
-            public string Value { get; set; } = string.Empty;
+            public string? Key { get; set; } = string.Empty;
+            public string? Value { get; set; } = string.Empty;
         }
 
         private SQLiteConnection? Connection { get; set; } = null;
 
-        public SimpleDatabase Open(string dbFilePath)
+        public SimpleDatabase? Open(string dbFilePath)
         {
             Logger.Info("Opening Database: {file}", dbFilePath);
 
@@ -107,10 +107,12 @@ namespace LibSimpleDatabase
         }
 
         public List<T> GetAllValues<T>(TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
-        {
-            List<SimpleSetting> settings = SelectAllSettings();
-
+        {  
             List<T> lst = new List<T>();
+
+            List<SimpleSetting>? settings = SelectAllSettings();
+            if (settings == null)
+                return lst;
 
             var ser = new JsonSerializerSettings
             {
@@ -122,7 +124,9 @@ namespace LibSimpleDatabase
 
             foreach (SimpleSetting ss in settings)
             {
-                lst.Add(ss.Value == string.Empty ? default : (T)JsonConvert.DeserializeObject(ss.Value, typeof(T), ser));
+                var res = string.IsNullOrEmpty(ss.Value) ? default : (T)JsonConvert.DeserializeObject(ss.Value, typeof(T), ser); 
+                if (res != null) 
+                    lst.Add(res);
             }
             return lst;
         }
@@ -170,12 +174,12 @@ namespace LibSimpleDatabase
             OnPropertyChanged(key);
         }
 
-        public bool ExistsSetting(string key) => Connection.Table<SimpleSetting>().Where(v => v.Key == key).Count() > 0;
+        public bool ExistsSetting(string key) => Connection?.Table<SimpleSetting>().Where(v => v.Key == key).Count() > 0;
 
-        private int InsertOrReplace(SimpleSetting setting) => Connection.InsertOrReplace(setting);
-        public SimpleSetting SelectSetting(string key) => Connection.Table<SimpleSetting>().Where(v => v.Key == key).FirstOrDefault();
-        public int DeleteSetting(string key) { var ret = Connection.Table<SimpleSetting>().Delete(v => v.Key == key); OnPropertyChanged(key); return ret; }
-        public List<SimpleSetting> SelectAllSettings() => Connection.CreateCommand("select * from SimpleSetting").ExecuteQuery<SimpleSetting>();
+        private int? InsertOrReplace(SimpleSetting setting) => Connection?.InsertOrReplace(setting);
+        public SimpleSetting? SelectSetting(string key) => Connection?.Table<SimpleSetting>().Where(v => v.Key == key).FirstOrDefault();
+        public int? DeleteSetting(string key) { var ret = Connection?.Table<SimpleSetting>().Delete(v => v.Key == key); OnPropertyChanged(key); return ret; }
+        public List<SimpleSetting>? SelectAllSettings() => Connection?.CreateCommand("select * from SimpleSetting").ExecuteQuery<SimpleSetting>();
 
         public void Close() => Connection?.Dispose();
         public void Dispose()
