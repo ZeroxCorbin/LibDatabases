@@ -9,10 +9,8 @@ using System.Text;
 namespace LibSimpleDatabase
 {
 
-    public class SimpleDatabase : ObservableObject, IDisposable
+    public class SimpleDatabase : ObservableObject
     {
-        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-
         public class SimpleSetting
         {
             [PrimaryKey]
@@ -24,8 +22,6 @@ namespace LibSimpleDatabase
 
         public SimpleDatabase? Open(string dbFilePath)
         {
-            Logger.Info("Opening Database: {file}", dbFilePath);
-
             if (string.IsNullOrEmpty(dbFilePath))
                 return null;
 
@@ -40,7 +36,6 @@ namespace LibSimpleDatabase
             }
             catch (Exception e)
             {
-                Logger.Error(e);
                 return null;
             }
         }
