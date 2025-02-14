@@ -18,22 +18,28 @@ public class SimpleDatabase : ObservableObject
 
     private SQLiteConnection? Connection { get; set; } = null;
 
-    public SimpleDatabase? Open(string dbFilePath)
+    public bool Open(string dbFilePath)
     {
         if (string.IsNullOrEmpty(dbFilePath))
-            return null;
+            return false;
 
         try
         {
             Connection ??= new SQLiteConnection(dbFilePath);
             _ = Connection.CreateTable<SimpleSetting>();
 
-            return this;
+            return true;
         }
         catch (Exception)
         {
-            return null;
+            return true;
         }
+    }
+
+    public static SimpleDatabase? Create(string dbFilePath)
+    {
+        SimpleDatabase db = new();
+        return db.Open(dbFilePath) ? db : null;
     }
 
     public T? GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
