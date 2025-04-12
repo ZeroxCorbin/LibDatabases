@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace LibSimpleDatabase;
 
 
-public class SimpleDatabase : ObservableObject
+public class SimpleDatabase : ObservableObject, IDisposable
 {
     public class SimpleSetting
     {
