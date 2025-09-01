@@ -44,7 +44,7 @@ public class SimpleDatabase : ObservableObject, IDisposable
 
     public T? GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
     {
-        SimpleSetting? settings = SelectSetting(key);
+        var settings = SelectSetting(key);
         if (settings == null)
         {
             if (setDefault)
@@ -74,7 +74,7 @@ public class SimpleDatabase : ObservableObject, IDisposable
     }
     public T? GetValue<T>(string key, T? defaultValue, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
     {
-        SimpleSetting? settings = SelectSetting(key);
+        var settings = SelectSetting(key);
         if (settings == null)
         {
             if (setDefault)
@@ -107,7 +107,7 @@ public class SimpleDatabase : ObservableObject, IDisposable
     {
         List<T> lst = [];
 
-        List<SimpleSetting>? settings = SelectAllSettings();
+        var settings = SelectAllSettings();
         if (settings == null)
             return lst;
 
@@ -119,9 +119,9 @@ public class SimpleDatabase : ObservableObject, IDisposable
         if (noErrors)
             ser.Error = (sender, errorArgs) => errorArgs.ErrorContext.Handled = true;
 
-        foreach (SimpleSetting ss in settings)
+        foreach (var ss in settings)
         {
-            T? res = string.IsNullOrEmpty(ss.Value) ? default : (T?)JsonConvert.DeserializeObject(ss.Value, typeof(T), ser);
+            var res = string.IsNullOrEmpty(ss.Value) ? default : (T?)JsonConvert.DeserializeObject(ss.Value, typeof(T), ser);
             if (res != null)
                 lst.Add(res);
         }
@@ -175,7 +175,7 @@ public class SimpleDatabase : ObservableObject, IDisposable
 
     private int? InsertOrReplace(SimpleSetting setting) => Connection?.InsertOrReplace(setting);
     public SimpleSetting? SelectSetting(string key) => Connection?.Table<SimpleSetting>().Where(v => v.Key == key).FirstOrDefault();
-    public int? DeleteSetting(string key) { int? ret = Connection?.Table<SimpleSetting>().Delete(v => v.Key == key); OnPropertyChanged(key); return ret; }
+    public int? DeleteSetting(string key) { var ret = Connection?.Table<SimpleSetting>().Delete(v => v.Key == key); OnPropertyChanged(key); return ret; }
     public List<SimpleSetting>? SelectAllSettings() => Connection?.CreateCommand("select * from SimpleSetting").ExecuteQuery<SimpleSetting>();
 
     public void Close() => Connection?.Dispose();
