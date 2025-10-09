@@ -6,7 +6,6 @@ using System.Collections.Generic;
 
 namespace LibSimpleDatabase;
 
-
 public class SimpleDatabase : ObservableObject, IDisposable
 {
     public class SimpleSetting
@@ -16,7 +15,18 @@ public class SimpleDatabase : ObservableObject, IDisposable
         public string? Value { get; set; } = string.Empty;
     }
 
+    private readonly string _prefix = string.Empty;
+    private readonly string _suffix = string.Empty;
+
     private SQLiteConnection? Connection { get; set; } = null;
+
+    public SimpleDatabase(string? prefix = "", string? suffix = "")
+    {
+        _prefix = prefix ?? string.Empty;
+        _suffix = suffix ?? string.Empty;
+    }
+
+    private string GetStorageKey(string key, bool useRawKey) => useRawKey ? key : string.Concat(_prefix, key, _suffix);
 
     public bool Open(string dbFilePath)
     {
@@ -42,13 +52,19 @@ public class SimpleDatabase : ObservableObject, IDisposable
         return db.Open(dbFilePath) ? db : null;
     }
 
-    public T? GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
+    public static SimpleDatabase? Create(string dbFilePath, string? prefix, string? suffix)
     {
-        var settings = SelectSetting(key);
+        SimpleDatabase db = new(prefix, suffix);
+        return db.Open(dbFilePath) ? db : null;
+    }
+
+    public T? GetValue<T>(string key, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false, bool useRawKey = false)
+    {
+        var settings = SelectSetting(key, useRawKey);
         if (settings == null)
         {
             if (setDefault)
-                SetValue<T>(key, default);
+                SetValue<T>(key, default, handling, noErrors, useRawKey);
 
             return default;
         }
@@ -72,13 +88,14 @@ public class SimpleDatabase : ObservableObject, IDisposable
             }
         }
     }
-    public T? GetValue<T>(string key, T? defaultValue, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
+
+    public T? GetValue<T>(string key, T? defaultValue, bool setDefault = false, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false, bool useRawKey = false)
     {
-        var settings = SelectSetting(key);
+        var settings = SelectSetting(key, useRawKey);
         if (settings == null)
         {
             if (setDefault)
-                SetValue<T>(key, defaultValue);
+                SetValue<T>(key, defaultValue, handling, noErrors, useRawKey);
 
             return defaultValue;
         }
@@ -128,24 +145,44 @@ public class SimpleDatabase : ObservableObject, IDisposable
         return lst;
     }
 
+    //Left for compatability
     public void SetValue(string key, string? value)
     {
+        var storageKey = GetStorageKey(key, true);
+
         SimpleSetting set = new()
         {
-            Key = key,
+            Key = storageKey,
             Value = value
         };
         _ = InsertOrReplace(set);
 
         OnPropertyChanged(key);
     }
-    public void SetValue<T>(string key, T? value, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false)
+
+    public void SetValue(string key, string? value, bool useRawKey = false)
     {
+        var storageKey = GetStorageKey(key, useRawKey);
+
+        SimpleSetting set = new()
+        {
+            Key = storageKey,
+            Value = value
+        };
+        _ = InsertOrReplace(set);
+
+        OnPropertyChanged(key);
+    }
+
+    public void SetValue<T>(string key, T? value, TypeNameHandling handling = TypeNameHandling.None, bool noErrors = false, bool useRawKey = false)
+    {
+        var storageKey = GetStorageKey(key, useRawKey);
+
         if (typeof(T) == typeof(string) || typeof(T).IsPrimitive)
         {
             SimpleSetting set = new()
             {
-                Key = key,
+                Key = storageKey,
                 Value = value?.ToString()
             };
             _ = InsertOrReplace(set);
@@ -162,7 +199,7 @@ public class SimpleDatabase : ObservableObject, IDisposable
 
             SimpleSetting set = new()
             {
-                Key = key,
+                Key = storageKey,
                 Value = JsonConvert.SerializeObject(value, ser)
             };
             _ = InsertOrReplace(set);
@@ -171,14 +208,32 @@ public class SimpleDatabase : ObservableObject, IDisposable
         OnPropertyChanged(key);
     }
 
-    public bool ExistsSetting(string key) => Connection?.Table<SimpleSetting>().Where(v => v.Key == key).Count() > 0;
+    public bool ExistsSetting(string key, bool useRawKey = false)
+    {
+        var storageKey = GetStorageKey(key, useRawKey);
+        return Connection?.Table<SimpleSetting>().Where(v => v.Key == storageKey).Count() > 0;
+    }
 
     private int? InsertOrReplace(SimpleSetting setting) => Connection?.InsertOrReplace(setting);
-    public SimpleSetting? SelectSetting(string key) => Connection?.Table<SimpleSetting>().Where(v => v.Key == key).FirstOrDefault();
-    public int? DeleteSetting(string key) { var ret = Connection?.Table<SimpleSetting>().Delete(v => v.Key == key); OnPropertyChanged(key); return ret; }
+
+    public SimpleSetting? SelectSetting(string key, bool useRawKey = false)
+    {
+        var storageKey = GetStorageKey(key, useRawKey);
+        return Connection?.Table<SimpleSetting>().Where(v => v.Key == storageKey).FirstOrDefault();
+    }
+
+    public int? DeleteSetting(string key, bool useRawKey = false)
+    {
+        var storageKey = GetStorageKey(key, useRawKey);
+        var ret = Connection?.Table<SimpleSetting>().Delete(v => v.Key == storageKey);
+        OnPropertyChanged(key);
+        return ret;
+    }
+
     public List<SimpleSetting>? SelectAllSettings() => Connection?.CreateCommand("select * from SimpleSetting").ExecuteQuery<SimpleSetting>();
 
     public void Close() => Connection?.Dispose();
+
     public void Dispose()
     {
         Connection?.Close();
